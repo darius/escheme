@@ -139,8 +139,17 @@
                                env
                                (mapcar 'car (cadr exp))
                                (mapcar 'cadr (cadr exp)))))
-           (t (escm-apply (escm-ev (car exp) env)
-                          (escm-evlis (cdr exp) env)))))
+           (t (let ((proc (escm-ev (car exp) env))
+                    (args (escm-evlis (cdr exp) env)))
+                ;; (escm-apply proc args) coded inline here for the sake
+                ;; of proper tail recursion:
+                (cond ((functionp proc) (apply proc args))
+                      ((consp proc)
+                       (cond ((eq escm-tag:procedure (car proc))
+                              (destructuring-bind ((vars exp) . env) (cdr proc)
+                                (escm-ev exp (escm-env-extend env vars args))))
+                             (t (error "Unknown procedure type" proc))))
+                      (t (error "Unknown procedure type" proc)))))))
         (t (error "Unknown expression type" exp))))
 
 (defun escm-evlis (exps env)
@@ -150,12 +159,7 @@
           (escm-evlis (cdr exps) env))))
 
 (defun escm-apply (proc args)
-  (cond ((functionp proc) (apply proc args))
-        ((consp proc)
-         (cond ((eq escm-tag:procedure (car proc))
-                (destructuring-bind ((vars exp) . env) (cdr proc)
-                  (escm-ev exp (escm-env-extend env vars args))))
-               (t (error "Unknown procedure type" proc))))
-        (t (error "unimplemented"))))
+  (escm-ev (mapcar (lambda (x) (list 'quote x)) (cons proc args))
+           nil))
 
 (provide 'escm)
