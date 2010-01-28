@@ -118,39 +118,55 @@
              ,(car exps)
              (lambda () ,(escm-expand-begin (cdr exps)))))))
 
+(defvar escm-tag:more (make-symbol "#<tag:more>"))
+
 (defun escm-ev (exp env)
-  (cond ((symbolp exp) (escm-env-get env exp))
-        ((atom exp) exp)
-        ((consp exp)
-         (case (car exp)
-           (quote (cadr exp))
-           (lambda (list* escm-tag:procedure (cdr exp) env))
-           (setq (escm-env-set env
-                               (cadr exp)
-                               (escm-ev (caddr exp) env)))
-           (if (if (escm-ev (cadr exp) env)
-                   (escm-ev (caddr exp) env)
-                 (escm-ev (cadddr exp) env)))
-           (define (escm-define env
-                                (cadr exp)
-                                (escm-ev (caddr exp) env)))
-           (letrec (escm-ev (caddr exp)
-                              (escm-env-extend-recursively
-                               env
-                               (mapcar 'car (cadr exp))
-                               (mapcar 'cadr (cadr exp)))))
-           (t (let ((proc (escm-ev (car exp) env))
-                    (args (escm-evlis (cdr exp) env)))
-                ;; (escm-apply proc args) coded inline here for the sake
-                ;; of proper tail recursion:
-                (cond ((functionp proc) (apply proc args))
-                      ((consp proc)
-                       (cond ((eq escm-tag:procedure (car proc))
-                              (destructuring-bind ((vars exp) . env) (cdr proc)
-                                (escm-ev exp (escm-env-extend env vars args))))
-                             (t (error "Unknown procedure type" proc))))
-                      (t (error "Unknown procedure type" proc)))))))
-        (t (error "Unknown expression type" exp))))
+  (let ((value escm-tag:more))
+    (while (eq value escm-tag:more)
+      (cond
+       ((symbolp exp)
+        (setq value (escm-env-get env exp)))
+       ((atom exp)
+        (setq value exp))
+       ((consp exp)
+        (case (car exp)
+          ((quote)
+           (setq value (cadr exp)))
+          ((lambda)
+           (setq value (list* escm-tag:procedure (cdr exp) env)))
+          ((setq)
+           (setq value (escm-env-set env
+                                     (cadr exp)
+                                     (escm-ev (caddr exp) env))))
+          ((if)
+           (setq exp (if (escm-ev (cadr exp) env)
+                         (caddr exp)
+                       (cadddr exp))))
+          ((define)
+           (setq value (escm-define env
+                                    (cadr exp)
+                                    (escm-ev (caddr exp) env))))
+          ((letrec)
+           (setq env (escm-env-extend-recursively
+                      env
+                      (mapcar 'car (cadr exp))
+                      (mapcar 'cadr (cadr exp)))
+                 exp (caddr exp)))
+          (t (let ((proc (escm-ev (car exp) env))
+                   (args (escm-evlis (cdr exp) env)))
+               ;; (escm-apply proc args) coded inline here for the sake
+               ;; of proper tail recursion:
+               (cond ((functionp proc)
+                      (setq value (apply proc args)))
+                     ((consp proc)
+                      (cond ((eq escm-tag:procedure (car proc))
+                             (destructuring-bind ((vars body) . new-env) (cdr proc)
+                               (setq exp body
+                                     env (escm-env-extend new-env vars args))))
+                            (t (error "Unknown procedure type" proc))))
+                     (t (error "Unknown procedure type" proc)))))))
+       (t (error "Unknown expression type" exp))))
+    value))
 
 (defun escm-evlis (exps env)
   (if (null exps)
