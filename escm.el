@@ -14,7 +14,7 @@
     (do ((vals vals (cdr vals))
          (exps exps (cdr exps)))
         ((null vals) result)
-      (setcar vals (escm-eval (car exps) result)))))
+      (setcar vals (escm-ev (car exps) result)))))
 
 (defun escm-env-get (env var)
   (if (hash-table-p env)
@@ -54,7 +54,14 @@
 
 (defvar escm-root-env (escm-env-make))
 
-(defun escm-eval (exp env)
+(defun escm-eval (exp &optional env)
+  (escm-ev (escm-expand exp)
+           (or env (setq env escm-root-env))))
+
+(defun escm-expand (exp)
+  exp)
+
+(defun escm-ev (exp env)
   (cond ((symbolp exp) (escm-env-get env exp))
         ((atom exp) exp)
         ((consp exp)
@@ -63,26 +70,26 @@
            (lambda (list* escm-tag:procedure (cdr exp) env))
            (setq (escm-env-set env
                                (cadr exp)
-                               (escm-eval (caddr exp) env)))
-           (if (if (escm-eval (cadr exp) env)
-                   (escm-eval (caddr exp) env)
-                 (escm-eval (cadddr exp) env)))
+                               (escm-ev (caddr exp) env)))
+           (if (if (escm-ev (cadr exp) env)
+                   (escm-ev (caddr exp) env)
+                 (escm-ev (cadddr exp) env)))
            (define (escm-define env
                                 (cadr exp)
-                                (escm-eval (caddr exp) env)))
-           (letrec (escm-eval (caddr exp)
+                                (escm-ev (caddr exp) env)))
+           (letrec (escm-ev (caddr exp)
                               (escm-env-extend-recursively
                                env
                                (mapcar 'car (cadr exp))
                                (mapcar 'cadr (cadr exp)))))
-           (t (escm-apply (escm-eval (car exp) env)
+           (t (escm-apply (escm-ev (car exp) env)
                           (escm-evlis (cdr exp) env)))))
         (t (error "Unknown expression type" exp))))
 
 (defun escm-evlis (exps env)
   (if (null exps)
       '()
-    (cons (escm-eval (car exps) env)
+    (cons (escm-ev (car exps) env)
           (escm-evlis (cdr exps) env))))
 
 (defun escm-apply (proc args)
@@ -90,7 +97,7 @@
         ((consp proc)
          (cond ((eq escm-tag:procedure (car proc))
                 (destructuring-bind ((vars exp) . env) (cdr proc)
-                  (escm-eval exp (escm-env-extend env vars args))))
+                  (escm-ev exp (escm-env-extend env vars args))))
                (t (error "Unknown procedure type" proc))))
         (t (error "unimplemented"))))
 
