@@ -1,5 +1,5 @@
-;; XXX need syntax checking, parameters/arguments checking, etc.
-;; XXX macros
+;; XXX need more syntax checking, parameters/arguments checking, etc.
+;; XXX more built-in macros
 ;; XXX tail calls
 ;; XXX handle unbound var set
 ;; XXX test suite

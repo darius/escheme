@@ -58,40 +58,61 @@
   (escm-ev (escm-expand exp)
            (or env escm-root-env)))
 
+(defvar escm-macroexpanders (escm-env-make))
+
+(defun escm-install-macro (name expander)
+  (escm-env-set escm-macroexpanders name expander))
+
+(defun escm-macro-get (name)
+  (gethash name escm-macroexpanders))
+
+(defmacro def-escm-macro (name parameters &rest body)
+  `(escm-install-macro ',name (list* 'lambda ',parameters ',body)))
+
+(def-escm-macro and (&rest exps)
+  (cond ((null exps) nil)
+        ((null (cdr exps)) (car exps))
+        (t `(if ,(car exps)
+                (and ,@(cdr exps))
+              nil))))
+
 (defun escm-expand (exp)
-  (cond ((atom exp) exp)
-        ((consp exp)
-         (case (car exp)
-           ((quote)
-            (destructuring-bind (_ datum) exp
-              exp))
-           ((lambda)
-            (destructuring-bind (_ vars . exps) exp
-              `(lambda ,vars ,(escm-expand-exps exps))))
-           ((setq)
-            (destructuring-bind (_ var exp1) exp
-              `(setq ,var ,(escm-expand exp1))))
-           ((if)
-            (when (not (memq (length exp) '(3 4)))
-              (error "Bad syntax" exp))
-            `(if ,(escm-expand (cadr exp))
-                 ,(escm-expand (caddr exp))
-                 ,(escm-expand (cadddr exp))))
-           ((define)
-            (if (symbolp (cadr exp))
-                (destructuring-bind (_ var exp1) exp
-                  `(define ,var ,(escm-expand exp1)))
-              (destructuring-bind (_ (var . vars) . exps) exp
-                `(define ,var (lambda ,vars . ,exps)))))
-           ((letrec)
-            (destructuring-bind (_ pairs . exps) exp
-              `(letrec ,(mapcar (lambda (pair)
-                                  (destructuring-bind (var init) pair
-                                    `(,var ,(escm-expand init))))
-                                pairs)
-                  ,(escm-expand-exps exps))))
-           (t (mapcar 'escm-expand exp))))
-        (t (error "Unknown expression type" exp))))
+  (cond
+   ((atom exp) exp)
+   ((consp exp)
+    (if (escm-macro-get (car exp))
+        (escm-expand (apply (escm-macro-get (car exp)) (cdr exp)))
+      (case (car exp)
+        ((quote)
+         (destructuring-bind (_ datum) exp
+           exp))
+        ((lambda)
+         (destructuring-bind (_ vars . exps) exp
+           `(lambda ,vars ,(escm-expand-exps exps))))
+        ((setq)
+         (destructuring-bind (_ var exp1) exp
+           `(setq ,var ,(escm-expand exp1))))
+        ((if)
+         (when (not (memq (length exp) '(3 4)))
+           (error "Bad syntax" exp))
+         `(if ,(escm-expand (cadr exp))
+              ,(escm-expand (caddr exp))
+            ,(escm-expand (cadddr exp))))
+        ((define)
+         (if (symbolp (cadr exp))
+             (destructuring-bind (_ var exp1) exp
+               `(define ,var ,(escm-expand exp1)))
+           (destructuring-bind (_ (var . vars) . exps) exp
+             `(define ,var (lambda ,vars . ,exps)))))
+        ((letrec)
+         (destructuring-bind (_ pairs . exps) exp
+           `(letrec ,(mapcar (lambda (pair)
+                               (destructuring-bind (var init) pair
+                                 `(,var ,(escm-expand init))))
+                             pairs)
+              ,(escm-expand-exps exps))))
+        (t (mapcar 'escm-expand exp)))))
+    (t (error "Unknown expression type" exp))))
 
 (defun escm-expand-exps (exps)
   (escm-expand-begin (mapcar 'escm-expand exps)))
