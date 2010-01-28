@@ -21,7 +21,7 @@
       (let ((val (gethash var env escm-unbound-symbol)))
         (if (eq val escm-unbound-symbol)
             (cond ((boundp var) (symbol-value var))
-                  ((fboundp var) var)
+                  ((fboundp var) (symbol-function var))
                   (t (error "Unbound variable" var)))
           val))
     (destructuring-bind (vars vals . parent-env) env
@@ -86,7 +86,7 @@
           (escm-evlis (cdr exps) env))))
 
 (defun escm-apply (proc args)
-  (cond ((symbolp proc) (apply proc args))
+  (cond ((functionp proc) (apply proc args))
         ((consp proc)
          (cond ((eq escm-tag:procedure (car proc))
                 (destructuring-bind ((vars exp) . env) (cdr proc)
