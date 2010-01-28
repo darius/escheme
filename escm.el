@@ -56,17 +56,59 @@
 
 (defun escm-eval (exp &optional env)
   (escm-ev (escm-expand exp)
-           (or env (setq env escm-root-env))))
+           (or env escm-root-env)))
 
 (defun escm-expand (exp)
-  exp)
+  (cond ((atom exp) exp)
+        ((consp exp)
+         (case (car exp)
+           ((quote)
+            (destructuring-bind (_ datum) exp
+              exp))
+           ((lambda)
+            (destructuring-bind (_ vars . exps) exp
+              `(lambda ,vars ,(escm-expand-exps exps))))
+           ((setq)
+            (destructuring-bind (_ var exp1) exp
+              `(setq ,var ,(escm-expand exp1))))
+           ((if)
+            (when (not (memq (length exp) '(3 4)))
+              (error "Bad syntax" exp))
+            `(if ,(escm-expand (cadr exp))
+                 ,(escm-expand (caddr exp))
+                 ,(escm-expand (cadddr exp))))
+           ((define)
+            (if (symbolp (cadr exp))
+                (destructuring-bind (_ var exp1) exp
+                  `(define ,var ,(escm-expand exp1)))
+              (destructuring-bind (_ (var . vars) . exps) exp
+                `(define ,var (lambda ,vars . ,exps)))))
+           ((letrec)
+            (destructuring-bind (_ pairs . exps) exp
+              `(letrec ,(mapcar (lambda (pair)
+                                  (destructuring-bind (var init) pair
+                                    `(,var ,(escm-expand init))))
+                                pairs)
+                  ,(escm-expand-exps exps))))
+           (t (mapcar 'escm-expand exp))))
+        (t (error "Unknown expression type" exp))))
+
+(defun escm-expand-exps (exps)
+  (escm-expand-begin (mapcar 'escm-expand exps)))
+
+(defun escm-expand-begin (exps)
+  (cond ((null exps) nil)
+        ((null (cdr exps)) (car exps))
+        (t `((lambda (first rest) (rest))
+             ,(car exps)
+             (lambda () ,(escm-expand-begin (cdr exps)))))))
 
 (defun escm-ev (exp env)
   (cond ((symbolp exp) (escm-env-get env exp))
         ((atom exp) exp)
         ((consp exp)
          (case (car exp)
-           (quote (cadr exp))            
+           (quote (cadr exp))
            (lambda (list* escm-tag:procedure (cdr exp) env))
            (setq (escm-env-set env
                                (cadr exp)
