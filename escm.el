@@ -1,5 +1,4 @@
-(defvar escm-unspecified-symbol (make-symbol "#<unspecified>"))
-(defvar escm-unbound-symbol (make-symbol "#<unbound>"))
+(defvar escm-unbound (make-symbol "#<unbound>"))
 (defvar escm-tag:procedure (make-symbol "#<tag:procedure>"))
 
 (defun escm-env-make ()
@@ -9,7 +8,7 @@
   (list* vars vals env))
 
 (defun escm-env-extend-recursively (env vars exps)
-  (let* ((vals (mapcar (lambda (_) escm-unbound-symbol) vars))
+  (let* ((vals (mapcar (lambda (_) escm-unbound) vars))
          (result (escm-env-extend env vars vals)))
     (do ((vals vals (cdr vals))
          (exps exps (cdr exps)))
@@ -18,8 +17,8 @@
 
 (defun escm-env-get (env var)
   (if (hash-table-p env)
-      (let ((val (gethash var env escm-unbound-symbol)))
-        (if (eq val escm-unbound-symbol)
+      (let ((val (gethash var env escm-unbound)))
+        (if (eq val escm-unbound)
             (cond ((boundp var) (symbol-value var))
                   ((fboundp var) (symbol-function var))
                   (t (error "Unbound variable" var)))
@@ -69,13 +68,6 @@
 (defmacro def-escm-macro (name parameters &rest body)
   `(escm-install-macro ',name (list* 'lambda ',parameters ',body)))
 
-(def-escm-macro and (&rest exps)
-  (cond ((null exps) nil)
-        ((null (cdr exps)) (car exps))
-        (t `(if ,(car exps)
-                (and ,@(cdr exps))
-              nil))))
-
 (defun escm-expand (exp)
   (cond
    ((atom exp) exp)
@@ -92,6 +84,8 @@
         ((setq)
          (destructuring-bind (_ var exp1) exp
            `(setq ,var ,(escm-expand exp1))))
+        ((begin)
+         (escm-expand-exps (cdr exp)))
         ((if)
          (when (not (memq (length exp) '(3 4)))
            (error "Bad syntax" exp))
