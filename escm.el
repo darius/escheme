@@ -20,9 +20,9 @@
   (if (hash-table-p env)
       (let ((val (gethash var env escm-unbound-symbol)))
         (if (eq val escm-unbound-symbol)
-            (if (fboundp var)
-                var 
-              (error "Unbound variable" var))
+            (cond ((boundp var) (symbol-value var))
+                  ((fboundp var) var)
+                  (t (error "Unbound variable" var)))
           val))
     (destructuring-bind (vars vals . parent-env) env
       (let ((i (escm-list-index vars var)))
@@ -53,13 +53,6 @@
   (puthash var val env))
 
 (defvar escm-root-env (escm-env-make))
-
-(escm-define escm-root-env 't 't)
-(escm-define escm-root-env 'nil 'nil)
-
-;; XXX need syntax checking, parameters/arguments checking, etc.
-;; XXX tail calls
-;; XXX raise an error on unbound var ref/set
 
 (defun escm-eval (exp env)
   (cond ((symbolp exp) (escm-env-get env exp))

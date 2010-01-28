@@ -1,0 +1,9 @@
+;; XXX need syntax checking, parameters/arguments checking, etc.
+;; XXX macros
+;; XXX tail calls
+;; XXX handle unbound var set
+;; XXX test suite
+;; XXX calling from elisp back to scheme
+;; XXX call/cc or something
+;; XXX error trapping
+
