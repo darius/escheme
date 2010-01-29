@@ -1,7 +1,7 @@
-;; XXX need more syntax checking, parameters/arguments checking, etc.
-;; XXX more built-in macros
-;; XXX handle unbound var set
-;; XXX test suite
-;; XXX calling from elisp back to scheme
-;; XXX error trapping
-
+* need more syntax checking, parameters/arguments checking, etc.
+* more built-in macros
+* handle unbound var set
+* more tests
+* error trapping
+* some kind of module or namespace system
+  (with exports to elisp too)
