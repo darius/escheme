@@ -168,6 +168,9 @@
        (t (error "Unknown expression type" exp))))
     value))
 
+(defun escm-procedure-p (x)
+  (and (consp x) (eq escm-tag:procedure (car x))))
+
 (defun escm-evlis (exps env)
   (if (null exps)
       '()
@@ -177,5 +180,36 @@
 (defun escm-apply (proc args)
   (escm-ev (mapcar (lambda (x) (list 'quote x)) (cons proc args))
            nil))
+
+;;; Test suite
+
+(defun escm-expect (expected exp &rest bindings)
+  "Assert that evaluating EXP yields EXPECTED."
+  (let ((env (escm-env-extend escm-root-env
+                              (mapcar 'car bindings)
+                              (mapcar 'cadr bindings))))
+    (let ((result (escm-eval exp env)))
+      (unless (equal result expected)
+        (error "Eval: %S => %S, expected %S" exp result expected)))))
+
+(escm-expect 42         '42)
+(escm-expect "yay"      '"yay")
+(escm-expect t 		't)
+(escm-expect 32 	'x '(x 32))
+(escm-expect '(a b)     ''(a b))
+(assert (escm-procedure-p (escm-eval '(lambda (x) x))))
+(escm-expect 5          '(+ 2 3))
+(escm-expect -12        '(* (+ 1 2) (- 4)))
+(escm-expect 'no        '(if (= 2 3) 'yes 'no))
+(escm-expect 'yes       '(if (= 2 2) 'yes 'no))
+(escm-expect 15         '(((lambda (m) (lambda (n) (- m n)))
+                           20)
+                          5))
+(escm-expect 8          '(letrec ((fib
+                                   (lambda (n)
+                                     (if (< n 2)
+                                         1
+                                         (+ (fib (- n 1)) (fib (- n 2)))))))
+                           (fib 5)))
 
 (provide 'escm)
