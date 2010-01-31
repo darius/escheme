@@ -1,5 +1,4 @@
 (defvar escm-unbound (make-symbol "#<unbound>"))
-(defvar escm-tag:procedure (make-symbol "#<tag:procedure>"))
 
 (defun escm-env-make ()
   (make-hash-table :test 'eq :weakness 'key))
@@ -133,7 +132,7 @@
           ((quote)
            (setq value (cadr exp)))
           ((lambda)
-           (setq value (list* escm-tag:procedure (cdr exp) env)))
+           (setq value (escm-enclose exp env)))
           ((setq)
            (setq value (escm-env-set env
                                      (cadr exp)
@@ -154,32 +153,41 @@
                  exp (caddr exp)))
           (t (let ((proc (escm-ev (car exp) env))
                    (args (escm-evlis (cdr exp) env)))
-               ;; (escm-apply proc args) coded inline here for the sake
-               ;; of proper tail recursion:
-               (cond ((functionp proc)
-                      (setq value (apply proc args)))
-                     ((consp proc)
-                      (cond ((eq escm-tag:procedure (car proc))
-                             (destructuring-bind ((vars body) . new-env) (cdr proc)
-                               (setq exp body
-                                     env (escm-env-extend new-env vars args))))
-                            (t (error "Unknown procedure type" proc))))
-                     (t (error "Unknown procedure type" proc)))))))
+               ;; (apply proc args) coded inline here for the sake of
+               ;; proper tail recursion:
+               (if (escm-procedure-p proc)
+                   (destructuring-bind
+                       (_ (_ _)
+                          (_ (_ (new-env vars body)) _))
+                       proc
+                     (setq exp body
+                           env (escm-env-extend new-env vars args)))
+                 (setq value (apply proc args)))))))
        (t (error "Unknown expression type" exp))))
     value))
 
+(defvar escm-params-symbol (make-symbol "#<escm-params>"))
+
+(defun escm-enclose (lambda-exp env)
+  "Return a new closure"
+  `(lambda (&rest ,escm-params-symbol)
+     (escm-eval-closure ',(cons env (cdr lambda-exp))
+                        ,escm-params-symbol)))
+
+(defun escm-eval-closure (data arguments)
+  (destructuring-bind (env vars body) data
+    (escm-ev body 
+             (escm-env-extend env vars arguments))))
+
 (defun escm-procedure-p (x)
-  (and (consp x) (eq escm-tag:procedure (car x))))
+  (and (consp x)
+       (eq (cadadr x) escm-params-symbol)))
 
 (defun escm-evlis (exps env)
   (if (null exps)
       '()
     (cons (escm-ev (car exps) env)
           (escm-evlis (cdr exps) env))))
-
-(defun escm-apply (proc args)
-  (escm-ev (mapcar (lambda (x) (list 'quote x)) (cons proc args))
-           nil))
 
 ;;; Test suite
 

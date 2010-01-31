@@ -5,3 +5,12 @@
 * error trapping
 * some kind of module or namespace system
   (with exports to elisp too)
+* compiler
+* rewrite escm-expand using wok-match
+* rewrite wok-match to compile patterns, not interpret them
+* add an escm-load-file function or something
+
+* Scheme access to all these capabilities:
+  http://www.gnu.org/s/emacs/manual/html_node/elisp/Special-Forms.html
+
+* complain if a variable ref finds both value and function bindings?
