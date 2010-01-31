@@ -1,5 +1,4 @@
 * need more syntax checking, parameters/arguments checking, etc.
-* more built-in macros
 * handle unbound var set
 * more tests
 * error trapping

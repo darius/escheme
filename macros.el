@@ -90,5 +90,32 @@
           (else (__case__ ,v ,@clauses)))))
 
 
-'(def-escm-syntax do
-  )
+(def-escm-syntax do
+  ((_ var-clauses test-clause . body-exps)
+   (dolist (var-clause var-clauses)
+     (assert (and (consp var-clause)
+                  (symbolp (car (var-clause)))
+                  (<= 1 (length var-clause) 3))))
+   (let ((loop-fn (gensym))
+         (variables (mapcar 'car var-clauses))
+         (inits (mapcar 'cadr var-clauses))
+         (steps (mapcar 'caddr var-clauses)))
+     `(letrec ((,loop-fn 
+                (lambda ,variables
+                  (cond ,test-clause
+                        (else
+                         ,@body-exps
+                         (,loop-fn . ,steps))))))
+        (,loop-fn . ,inits)))))
+
+
+(def-escm-syntax elisp-defuns
+  ((_ . names)
+   `(for-each fset ',names (list ,@names))))
+
+(defun for-each (fn lst &rest lsts)
+  (if (null lsts)                       ; special case for speed
+      (mapc fn lst)
+    (do ((lsts (cons lst lsts) (mapcar 'cdr lsts)))
+        ((null (car lsts)))
+      (apply fn (mapcar 'car lsts)))))
