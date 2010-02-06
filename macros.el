@@ -128,7 +128,7 @@
 
 
 ;;; Test suite
-;;; Derived from test.scm by Aubrey Jaffer
+;;; Derived from Aubrey Jaffer's test.scm
 
 (escm-expect 3          '(let ((reverse-subtract
                                 (lambda (x y) (- y x))))
