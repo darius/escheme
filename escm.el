@@ -20,7 +20,7 @@
         (if (eq val escm-unbound)
             (cond ((boundp var) (symbol-value var))
                   ((fboundp var) (symbol-function var))
-                  (t (error "Unbound variable" var)))
+                  (t (error "Unbound variable: %s" var)))
           val))
     (destructuring-bind (vars vals . parent-env) env
       (let ((i (escm-list-index vars var)))
@@ -219,5 +219,15 @@
                                          1
                                          (+ (fib (- n 1)) (fib (- n 2)))))))
                            (fib 5)))
+
+(escm-expect 12         '((if nil + *) 3 4))
+
+(escm-expect '(10 9)    '((lambda (x)
+                            (list x
+                                  (begin
+                                    (setq x (- x 1))
+                                    x)))
+                          (+ 3 7)))
+
 
 (provide 'escm)
