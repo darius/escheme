@@ -229,5 +229,18 @@
                                     x)))
                           (+ 3 7)))
 
+(escm-expect '(1 2 1 3 2) '(let ((make-counter
+                                  (lambda ()
+                                    (let ((n 0))
+                                      (lambda ()
+                                        (setq n (+ n 1))
+                                        n)))))
+                             (let ((g (make-counter))
+                                   (h (make-counter)))
+                               (list (g) (g) (h) (g) (h)))))
+
+(escm-expect nil        '(letrec ((f (lambda () (if (eq f g) 'f 'both)))
+                                  (g (lambda () (if (eq f g) 'g 'both))))
+                           (eq f g)))
 
 (provide 'escm)
