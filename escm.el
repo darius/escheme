@@ -1,3 +1,5 @@
+;;; Environments
+
 (defvar escm-unbound (make-symbol "#<unbound>"))
 
 (defun escm-env-make ()
@@ -51,6 +53,8 @@
   (puthash var val env))
 
 (defvar escm-root-env (escm-env-make))
+
+;;; Evaluation
 
 (defun escm-eval (exp &optional env)
   (escm-ev (escm-expand exp)
