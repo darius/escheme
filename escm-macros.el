@@ -1,5 +1,5 @@
 (require 'wok-match)
-(require 'escm)
+(require 'escm-kernel)
 
 ;; pattern syntax:
 ;; _                  wildcard
@@ -200,3 +200,5 @@
                        (loop (cdr numbers)
                              (cons (car numbers) nonneg)
                              neg)))))
+
+(provide 'escm-macros)
