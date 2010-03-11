@@ -1,10 +1,32 @@
+This is a Scheme dialect interoperable with Emacs Lisp code. Scheme
+functions can call Lisp functions and vice-versa. You get proper tail
+recursion and lexical scope but not call/cc.
+
+To use it, put this directory in load-path, then (require 'escm).
+Then you can run code -- for example, 
+
+  (escm-eval '(let loop ((n 37)) 
+                (print n)
+                (cond ((= n 1))
+                      ((evenp n) (loop (/ n 2)))
+                      ((oddp n) (loop (+ (* 3 n) 1))))))
+
+We use the same old Emacs Lisp function names instead of trying to
+make it look like "real Scheme".
+
+I'm not sure if I'll ever expand this program or even use it in
+anger. Writing it at least taught me some ELisp.
+
+
+TO DO:
+
 * need more syntax checking, parameters/arguments checking, etc.
 * handle unbound var set
 * more tests
 * error trapping
 * some kind of module or namespace system
   (with exports to elisp too)
-* compiler
+* compiler instead of slow interpreter
 * rewrite escm-expand using wok-match
 * rewrite wok-match to compile patterns, not interpret them
 * add an escm-load-file function or something
