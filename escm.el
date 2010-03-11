@@ -69,7 +69,8 @@
 
 (defun escm-expand (exp)
   (cond
-   ((atom exp) exp)
+   ((symbolp exp) exp)
+   ((atom exp) `',exp)
    ((consp exp)
     (if (escm-macro-get (car exp))
         (escm-expand (apply (escm-macro-get (car exp)) (cdr exp)))
@@ -122,12 +123,8 @@
 (defun escm-ev (exp env)
   (let ((value escm-tag:more))
     (while (eq value escm-tag:more)
-      (cond
-       ((symbolp exp)
-        (setq value (escm-env-get env exp)))
-       ((atom exp)
-        (setq value exp))
-       ((consp exp)
+      (if (symbolp exp)
+          (setq value (escm-env-get env exp))
         (case (car exp)
           ((quote)
            (setq value (cadr exp)))
@@ -162,8 +159,7 @@
                        proc
                      (setq exp body
                            env (escm-env-extend new-env vars args)))
-                 (setq value (apply proc args)))))))
-       (t (error "Unknown expression type" exp))))
+                 (setq value (apply proc args))))))))
     value))
 
 (defvar escm-params-symbol (make-symbol "#<escm-params>"))
@@ -229,14 +225,14 @@
                                     x)))
                           (+ 3 7)))
 
-(escm-expect '(1 2 1 3 2) '(let ((make-counter
-                                  (lambda ()
-                                    (let ((n 0))
-                                      (lambda ()
-                                        (setq n (+ n 1))
-                                        n)))))
-                             (let ((g (make-counter))
-                                   (h (make-counter)))
+(escm-expect '(1 2 1 3 2) '(letrec ((make-counter
+                                     (lambda ()
+                                       (letrec ((n 0))
+                                         (lambda ()
+                                           (setq n (+ n 1))
+                                           n)))))
+                             (letrec ((g (make-counter))
+                                      (h (make-counter)))
                                (list (g) (g) (h) (g) (h)))))
 
 (escm-expect nil        '(letrec ((f (lambda () (if (eq f g) 'f 'both)))
